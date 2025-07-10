@@ -15,55 +15,37 @@ class NinjaShooter {
         this.spacePressed = false;
         this.lastBulletTime = 0;
         
-        // Mobile controls
-        this.mobileControls = {
-            joystick: { active: false, x: 0, y: 0, centerX: 0, centerY: 0 },
-            attackButton: false
-        };
-        
-        try {
-            this.init();
-            this.setupEventListeners();
-            console.log('NinjaShooter initialized successfully');
-        } catch (error) {
-            console.error('Error initializing NinjaShooter:', error);
-        }
-        
-        // Setup mobile controls separately to prevent blocking game initialization
-        this.setupMobileControlsSafely();
+        this.init();
+        this.setupEventListeners();
+        console.log('NinjaShooter initialized successfully');
     }
 
     init() {
         console.log('Initializing game...');
-        try {
-            this.scene = new THREE.Scene();
-            this.scene.fog = new THREE.Fog(0x1a1a2e, 10, 100);
-            
-            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            this.camera.position.set(0, 5, 10);
-            
-            this.renderer = new THREE.WebGLRenderer({ antialias: true });
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
-            this.renderer.setClearColor(0x1a1a2e);
-            this.renderer.shadowMap.enabled = true;
-            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap || THREE.BasicShadowMap;
-            
-            const gameContainer = document.getElementById('gameContainer');
-            if (!gameContainer) {
-                throw new Error('Game container not found');
-            }
-            gameContainer.appendChild(this.renderer.domElement);
-            
-            this.setupLights();
-            this.setupEnvironment();
-            this.createPlayer();
-            
-            window.addEventListener('resize', () => this.onWindowResize());
-            console.log('Game initialization completed');
-        } catch (error) {
-            console.error('Error in init():', error);
-            throw error;
+        this.scene = new THREE.Scene();
+        this.scene.fog = new THREE.Fog(0x1a1a2e, 10, 100);
+        
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 5, 10);
+        
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setClearColor(0x1a1a2e);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap || THREE.BasicShadowMap;
+        
+        const gameContainer = document.getElementById('gameContainer');
+        if (!gameContainer) {
+            throw new Error('Game container not found');
         }
+        gameContainer.appendChild(this.renderer.domElement);
+        
+        this.setupLights();
+        this.setupEnvironment();
+        this.createPlayer();
+        
+        window.addEventListener('resize', () => this.onWindowResize());
+        console.log('Game initialization completed');
     }
 
     setupLights() {
@@ -173,12 +155,6 @@ class NinjaShooter {
         group.position.set(0, 1, 0);
         this.player = group;
         this.scene.add(group);
-        
-        // プレイヤーの呼吸アニメーション用の初期値
-        this.playerAnimation = {
-            breathOffset: 0,
-            moveOffset: 0
-        };
     }
 
     createEnemy() {
@@ -279,176 +255,32 @@ class NinjaShooter {
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         });
 
-        // Simple start button setup
-        this.setupStartButton();
-    }
-    
-    setupStartButton() {
-        // Multiple attempts to find and setup start button
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        const trySetupButton = () => {
-            attempts++;
-            const startButton = document.getElementById('startButton');
-            console.log(`Start button setup attempt ${attempts}/${maxAttempts}:`, !!startButton);
-            
-            if (startButton) {
-                startButton.addEventListener('click', () => {
-                    console.log('Start button clicked!');
-                    this.startGame();
-                });
-                console.log('Start button event listener added successfully');
-                return true;
-            } else if (attempts < maxAttempts) {
-                setTimeout(trySetupButton, 200);
-            } else {
-                console.error('Failed to find start button after all attempts');
-            }
-        };
-        
-        // Try immediately and also with delays
-        trySetupButton();
-    }
-    
-    setupMobileControlsSafely() {
-        // Use multiple delayed attempts to setup mobile controls
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        const trySetup = () => {
-            attempts++;
-            try {
-                console.log(`Mobile controls setup attempt ${attempts}/${maxAttempts}`);
-                const joystick = document.querySelector('.mobile-joystick');
-                const joystickHandle = document.querySelector('.mobile-joystick-handle');
-                const attackButton = document.querySelector('.mobile-attack-button');
-                
-                if (joystick && joystickHandle && attackButton) {
-                    this.setupMobileControls();
-                    console.log('Mobile controls setup successful');
-                    return true;
-                } else {
-                    console.log('Mobile elements not ready yet, retrying...');
-                    if (attempts < maxAttempts) {
-                        setTimeout(trySetup, 500);
-                    } else {
-                        console.log('Mobile controls setup failed after max attempts');
-                    }
-                }
-            } catch (error) {
-                console.error('Error in mobile controls setup attempt:', error);
-                if (attempts < maxAttempts) {
-                    setTimeout(trySetup, 500);
-                }
-            }
-        };
-        
-        setTimeout(trySetup, 100);
-    }
-    
-    setupMobileControls() {
-        console.log('Setting up mobile controls...');
-        const joystick = document.querySelector('.mobile-joystick');
-        const joystickHandle = document.querySelector('.mobile-joystick-handle');
-        const attackButton = document.querySelector('.mobile-attack-button');
-        
-        if (!joystick || !joystickHandle || !attackButton) {
-            console.error('Mobile control elements not found');
-            return;
-        }
-        
-        // Touch events for joystick
-        joystick.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.mobileControls.joystick.active = true;
-            this.updateJoystick(e.touches[0], joystickHandle);
-        });
-        
-        joystick.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (this.mobileControls.joystick.active) {
-                this.updateJoystick(e.touches[0], joystickHandle);
-            }
-        });
-        
-        joystick.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.mobileControls.joystick.active = false;
-            this.mobileControls.joystick.x = 0;
-            this.mobileControls.joystick.y = 0;
-            joystickHandle.style.transform = 'translate(-50%, -50%)';
-        });
-        
-        // Touch events for attack button
-        attackButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.mobileControls.attackButton = true;
-        });
-        
-        attackButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.mobileControls.attackButton = false;
-        });
-        
-        console.log('Mobile controls setup completed');
-    }
-    
-    updateJoystick(touch, handle) {
-        try {
-            const joystick = document.querySelector('.mobile-joystick');
-            if (!joystick) return;
-            
-            const rect = joystick.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            const deltaX = touch.clientX - centerX;
-            const deltaY = touch.clientY - centerY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            const maxDistance = 30;
-            
-            if (distance <= maxDistance) {
-                this.mobileControls.joystick.x = deltaX / maxDistance;
-                this.mobileControls.joystick.y = deltaY / maxDistance;
-                handle.style.transform = `translate(-50%, -50%) translate(${deltaX}px, ${deltaY}px)`;
-            } else {
-                const angle = Math.atan2(deltaY, deltaX);
-                const limitedX = Math.cos(angle) * maxDistance;
-                const limitedY = Math.sin(angle) * maxDistance;
-                this.mobileControls.joystick.x = limitedX / maxDistance;
-                this.mobileControls.joystick.y = limitedY / maxDistance;
-                handle.style.transform = `translate(-50%, -50%) translate(${limitedX}px, ${limitedY}px)`;
-            }
-        } catch (error) {
-            console.error('Error updating joystick:', error);
+        // シンプルなスタートボタン設定
+        const startButton = document.getElementById('startButton');
+        if (startButton) {
+            startButton.addEventListener('click', () => {
+                console.log('Start button clicked!');
+                this.startGame();
+            });
+            console.log('Start button event listener added');
         }
     }
 
     startGame() {
         console.log('Starting game...');
-        try {
-            this.gameStarted = true;
-            const startScreen = document.getElementById('startScreen');
-            if (startScreen) {
-                startScreen.style.display = 'none';
-                console.log('Start screen hidden');
-            } else {
-                console.error('Start screen not found');
-                return;
-            }
-            
-            // Reset game state
-            this.score = 0;
-            this.lives = 3;
-            this.updateUI();
-            
-            this.gameLoop();
-            console.log('Game loop started successfully');
-        } catch (error) {
-            console.error('Error starting game:', error);
-            console.error('Error stack:', error.stack);
+        this.gameStarted = true;
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) {
+            startScreen.style.display = 'none';
         }
+        
+        // Reset game state
+        this.score = 0;
+        this.lives = 3;
+        this.updateUI();
+        
+        this.gameLoop();
+        console.log('Game started successfully!');
     }
 
     updatePlayer() {
@@ -470,12 +302,6 @@ class NinjaShooter {
         if (this.keys['KeyD'] || this.keys['ArrowRight']) {
             playerPos.x += moveSpeed;
         }
-        
-        // Mobile controls
-        if (this.mobileControls.joystick.active) {
-            playerPos.x += this.mobileControls.joystick.x * moveSpeed;
-            playerPos.z += this.mobileControls.joystick.y * moveSpeed;
-        }
 
         playerPos.x = Math.max(-15, Math.min(15, playerPos.x));
         playerPos.z = Math.max(-5, Math.min(15, playerPos.z));
@@ -483,10 +309,6 @@ class NinjaShooter {
         this.camera.position.x = playerPos.x;
         this.camera.position.z = playerPos.z + 10;
         this.camera.lookAt(playerPos);
-        
-        // プレイヤーの呼吸アニメーション
-        this.playerAnimation.breathOffset += 0.05;
-        this.player.position.y = 1 + Math.sin(this.playerAnimation.breathOffset) * 0.05;
 
         // Keyboard attack
         if (this.keys['Space']) {
@@ -498,14 +320,6 @@ class NinjaShooter {
         } else {
             this.spacePressed = false;
         }
-        
-        // Mobile attack
-        if (this.mobileControls.attackButton) {
-            if (Date.now() - this.lastBulletTime > 200) {
-                this.createBullet();
-                this.lastBulletTime = Date.now();
-            }
-        }
     }
 
     updateEnemies() {
@@ -515,7 +329,7 @@ class NinjaShooter {
             
             enemy.position.add(userData.direction.clone().multiplyScalar(userData.speed));
             
-            // 敵の渡りアニメーション
+            // 敵の渦巻アニメーション
             enemy.rotation.y += 0.05;
             
             if (enemy.position.z > 20) {
@@ -628,19 +442,14 @@ class NinjaShooter {
     gameLoop() {
         if (!this.gameStarted) return;
         
-        try {
-            this.updatePlayer();
-            this.updateEnemies();
-            this.updateBullets();
-            this.checkCollisions();
-            
-            this.renderer.render(this.scene, this.camera);
-            
-            requestAnimationFrame(() => this.gameLoop());
-        } catch (error) {
-            console.error('Error in game loop:', error);
-            this.gameStarted = false;
-        }
+        this.updatePlayer();
+        this.updateEnemies();
+        this.updateBullets();
+        this.checkCollisions();
+        
+        this.renderer.render(this.scene, this.camera);
+        
+        requestAnimationFrame(() => this.gameLoop());
     }
 
     onWindowResize() {
@@ -650,14 +459,7 @@ class NinjaShooter {
     }
 }
 
-// Initialize the game when the script loads
-console.log('Game script loaded, initializing game...');
-try {
-    console.log('Creating NinjaShooter instance...');
-    const game = new NinjaShooter();
-    console.log('Game instance created successfully');
-    window.game = game; // Make game accessible globally for debugging
-} catch (error) {
-    console.error('Failed to create game instance:', error);
-    console.error('Error stack:', error.stack);
-}
+// シンプルな初期化
+console.log('Game script loaded, creating game...');
+const game = new NinjaShooter();
+console.log('Game created successfully');
