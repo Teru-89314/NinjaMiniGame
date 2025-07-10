@@ -15,9 +15,16 @@ class NinjaShooter {
         this.spacePressed = false;
         this.lastBulletTime = 0;
         
+        // Mobile controls
+        this.mobileControls = {
+            joystick: { active: false, x: 0, y: 0, centerX: 0, centerY: 0 },
+            attackButton: false
+        };
+        
         try {
             this.init();
             this.setupEventListeners();
+            this.setupMobileControls();
             console.log('NinjaShooter initialized successfully');
         } catch (error) {
             console.error('Error initializing NinjaShooter:', error);
@@ -28,14 +35,14 @@ class NinjaShooter {
         console.log('Initializing game...');
         try {
             this.scene = new THREE.Scene();
-            this.scene.fog = new THREE.Fog(0x404040, 10, 100);
+            this.scene.fog = new THREE.Fog(0x1a1a2e, 10, 100);
             
             this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             this.camera.position.set(0, 5, 10);
             
             this.renderer = new THREE.WebGLRenderer({ antialias: true });
             this.renderer.setSize(window.innerWidth, window.innerHeight);
-            this.renderer.setClearColor(0x87CEEB);
+            this.renderer.setClearColor(0x1a1a2e);
             this.renderer.shadowMap.enabled = true;
             this.renderer.shadowMap.type = THREE.PCFSoftShadowMap || THREE.BasicShadowMap;
             
@@ -75,23 +82,59 @@ class NinjaShooter {
 
     setupEnvironment() {
         const groundGeometry = new THREE.PlaneGeometry(50, 50);
-        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x3a5f3a });
+        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        for (let i = 0; i < 10; i++) {
-            const treeGeometry = new THREE.ConeGeometry(0.5, 3, 8);
-            const treeMaterial = new THREE.MeshLambertMaterial({ color: 0x2d5a2d });
-            const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-            tree.position.set(
+        // 和風建物の設置
+        for (let i = 0; i < 8; i++) {
+            const buildingGroup = new THREE.Group();
+            
+            // 建物の基礎
+            const baseGeometry = new THREE.BoxGeometry(2, 0.5, 2);
+            const baseMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+            const base = new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.y = 0.25;
+            buildingGroup.add(base);
+            
+            // 建物の壁
+            const wallGeometry = new THREE.BoxGeometry(1.8, 2, 1.8);
+            const wallMaterial = new THREE.MeshLambertMaterial({ color: 0xf4e4c1 });
+            const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+            wall.position.y = 1.25;
+            buildingGroup.add(wall);
+            
+            // 屋根
+            const roofGeometry = new THREE.ConeGeometry(1.5, 1, 4);
+            const roofMaterial = new THREE.MeshLambertMaterial({ color: 0x8b0000 });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 2.75;
+            roof.rotation.y = Math.PI / 4;
+            buildingGroup.add(roof);
+            
+            buildingGroup.position.set(
+                (Math.random() - 0.5) * 35,
+                0,
+                (Math.random() - 0.5) * 35
+            );
+            buildingGroup.castShadow = true;
+            this.scene.add(buildingGroup);
+        }
+        
+        // 竹林の追加
+        for (let i = 0; i < 15; i++) {
+            const bambooGeometry = new THREE.CylinderGeometry(0.1, 0.1, 4, 8);
+            const bambooMaterial = new THREE.MeshLambertMaterial({ color: 0x228b22 });
+            const bamboo = new THREE.Mesh(bambooGeometry, bambooMaterial);
+            bamboo.position.set(
                 (Math.random() - 0.5) * 40,
-                1.5,
+                2,
                 (Math.random() - 0.5) * 40
             );
-            tree.castShadow = true;
-            this.scene.add(tree);
+            bamboo.castShadow = true;
+            this.scene.add(bamboo);
         }
     }
 
@@ -99,7 +142,7 @@ class NinjaShooter {
         const group = new THREE.Group();
         
         const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8);
-        const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+        const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         body.castShadow = true;
         group.add(body);
@@ -112,7 +155,7 @@ class NinjaShooter {
         group.add(head);
 
         const maskGeometry = new THREE.PlaneGeometry(0.4, 0.15);
-        const maskMaterial = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+        const maskMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
         const mask = new THREE.Mesh(maskGeometry, maskMaterial);
         mask.position.set(0, 0.8, 0.25);
         group.add(mask);
@@ -128,19 +171,25 @@ class NinjaShooter {
         group.position.set(0, 1, 0);
         this.player = group;
         this.scene.add(group);
+        
+        // プレイヤーの呼吸アニメーション用の初期値
+        this.playerAnimation = {
+            breathOffset: 0,
+            moveOffset: 0
+        };
     }
 
     createEnemy() {
         const group = new THREE.Group();
         
         const bodyGeometry = new THREE.BoxGeometry(0.6, 0.8, 0.6);
-        const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x8b0000 });
+        const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x4a0000 });
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         body.castShadow = true;
         group.add(body);
 
         const headGeometry = new THREE.SphereGeometry(0.3, 8, 8);
-        const headMaterial = new THREE.MeshLambertMaterial({ color: 0x4a0000 });
+        const headMaterial = new THREE.MeshLambertMaterial({ color: 0x2a0000 });
         const head = new THREE.Mesh(headGeometry, headMaterial);
         head.position.y = 0.6;
         head.castShadow = true;
@@ -163,9 +212,28 @@ class NinjaShooter {
     }
 
     createBullet() {
-        const geometry = new THREE.SphereGeometry(0.1, 6, 6);
-        const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-        const bullet = new THREE.Mesh(geometry, material);
+        // 手裏剣の作成
+        const shurikenGroup = new THREE.Group();
+        
+        // 中心の円
+        const centerGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.02, 8);
+        const centerMaterial = new THREE.MeshLambertMaterial({ color: 0xc0c0c0 });
+        const center = new THREE.Mesh(centerGeometry, centerMaterial);
+        center.rotation.x = Math.PI / 2;
+        shurikenGroup.add(center);
+        
+        // 手裏剣の刃
+        for (let i = 0; i < 6; i++) {
+            const bladeGeometry = new THREE.ConeGeometry(0.02, 0.15, 3);
+            const bladeMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+            const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+            blade.rotation.x = Math.PI / 2;
+            blade.position.x = 0.08;
+            blade.rotation.z = (i * Math.PI) / 3;
+            shurikenGroup.add(blade);
+        }
+        
+        const bullet = shurikenGroup;
         
         bullet.position.copy(this.player.position);
         bullet.position.y += 0.5;
@@ -181,7 +249,8 @@ class NinjaShooter {
         bullet.userData = {
             direction: direction,
             speed: 0.5,
-            life: 100
+            life: 100,
+            rotationSpeed: 0.3
         };
         
         this.bullets.push(bullet);
@@ -219,6 +288,76 @@ class NinjaShooter {
             console.error('Start button not found');
         }
     }
+    
+    setupMobileControls() {
+        const joystick = document.querySelector('.mobile-joystick');
+        const joystickHandle = document.querySelector('.mobile-joystick-handle');
+        const attackButton = document.querySelector('.mobile-attack-button');
+        
+        if (joystick && joystickHandle) {
+            const joystickRect = joystick.getBoundingClientRect();
+            this.mobileControls.joystick.centerX = joystickRect.left + joystickRect.width / 2;
+            this.mobileControls.joystick.centerY = joystickRect.top + joystickRect.height / 2;
+            
+            // Touch events for joystick
+            joystick.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.mobileControls.joystick.active = true;
+                this.updateJoystick(e.touches[0], joystickHandle);
+            });
+            
+            joystick.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (this.mobileControls.joystick.active) {
+                    this.updateJoystick(e.touches[0], joystickHandle);
+                }
+            });
+            
+            joystick.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.mobileControls.joystick.active = false;
+                this.mobileControls.joystick.x = 0;
+                this.mobileControls.joystick.y = 0;
+                joystickHandle.style.transform = 'translate(-50%, -50%)';
+            });
+        }
+        
+        if (attackButton) {
+            attackButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.mobileControls.attackButton = true;
+            });
+            
+            attackButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.mobileControls.attackButton = false;
+            });
+        }
+    }
+    
+    updateJoystick(touch, handle) {
+        const rect = document.querySelector('.mobile-joystick').getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        const deltaX = touch.clientX - centerX;
+        const deltaY = touch.clientY - centerY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const maxDistance = 30;
+        
+        if (distance <= maxDistance) {
+            this.mobileControls.joystick.x = deltaX / maxDistance;
+            this.mobileControls.joystick.y = deltaY / maxDistance;
+            handle.style.transform = `translate(-50%, -50%) translate(${deltaX}px, ${deltaY}px)`;
+        } else {
+            const angle = Math.atan2(deltaY, deltaX);
+            const limitedX = Math.cos(angle) * maxDistance;
+            const limitedY = Math.sin(angle) * maxDistance;
+            this.mobileControls.joystick.x = limitedX / maxDistance;
+            this.mobileControls.joystick.y = limitedY / maxDistance;
+            handle.style.transform = `translate(-50%, -50%) translate(${limitedX}px, ${limitedY}px)`;
+        }
+    }
 
     startGame() {
         console.log('Starting game...');
@@ -244,6 +383,7 @@ class NinjaShooter {
         const moveSpeed = 0.1;
         const playerPos = this.player.position;
 
+        // Keyboard controls
         if (this.keys['KeyW'] || this.keys['ArrowUp']) {
             playerPos.z -= moveSpeed;
         }
@@ -256,6 +396,12 @@ class NinjaShooter {
         if (this.keys['KeyD'] || this.keys['ArrowRight']) {
             playerPos.x += moveSpeed;
         }
+        
+        // Mobile controls
+        if (this.mobileControls.joystick.active) {
+            playerPos.x += this.mobileControls.joystick.x * moveSpeed;
+            playerPos.z += this.mobileControls.joystick.y * moveSpeed;
+        }
 
         playerPos.x = Math.max(-15, Math.min(15, playerPos.x));
         playerPos.z = Math.max(-5, Math.min(15, playerPos.z));
@@ -263,7 +409,12 @@ class NinjaShooter {
         this.camera.position.x = playerPos.x;
         this.camera.position.z = playerPos.z + 10;
         this.camera.lookAt(playerPos);
+        
+        // プレイヤーの呼吸アニメーション
+        this.playerAnimation.breathOffset += 0.05;
+        this.player.position.y = 1 + Math.sin(this.playerAnimation.breathOffset) * 0.05;
 
+        // Keyboard attack
         if (this.keys['Space']) {
             if (!this.spacePressed || Date.now() - this.lastBulletTime > 200) {
                 this.createBullet();
@@ -273,6 +424,14 @@ class NinjaShooter {
         } else {
             this.spacePressed = false;
         }
+        
+        // Mobile attack
+        if (this.mobileControls.attackButton) {
+            if (Date.now() - this.lastBulletTime > 200) {
+                this.createBullet();
+                this.lastBulletTime = Date.now();
+            }
+        }
     }
 
     updateEnemies() {
@@ -281,6 +440,9 @@ class NinjaShooter {
             const userData = enemy.userData;
             
             enemy.position.add(userData.direction.clone().multiplyScalar(userData.speed));
+            
+            // 敵の渡りアニメーション
+            enemy.rotation.y += 0.05;
             
             if (enemy.position.z > 20) {
                 this.scene.remove(enemy);
@@ -301,6 +463,7 @@ class NinjaShooter {
             const userData = bullet.userData;
             
             bullet.position.add(userData.direction.clone().multiplyScalar(userData.speed));
+            bullet.rotation.z += userData.rotationSpeed; // 手裏剣の回転
             userData.life--;
             
             if (userData.life <= 0 || bullet.position.z < -30) {
@@ -318,6 +481,9 @@ class NinjaShooter {
                 const enemy = this.enemies[j];
                 
                 if (bullet.position.distanceTo(enemy.position) < 0.8) {
+                    // ヒットエフェクトの作成
+                    this.createHitEffect(enemy.position);
+                    
                     this.scene.remove(bullet);
                     this.scene.remove(enemy);
                     this.bullets.splice(i, 1);
@@ -328,6 +494,37 @@ class NinjaShooter {
                 }
             }
         }
+    }
+
+    createHitEffect(position) {
+        const particles = new THREE.Group();
+        
+        for (let i = 0; i < 8; i++) {
+            const particleGeometry = new THREE.SphereGeometry(0.05, 4, 4);
+            const particleMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+            
+            const direction = new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                Math.random() * 2,
+                (Math.random() - 0.5) * 2
+            ).normalize();
+            
+            particle.position.copy(position);
+            particle.userData = {
+                velocity: direction.multiplyScalar(0.1),
+                life: 30
+            };
+            
+            particles.add(particle);
+        }
+        
+        this.scene.add(particles);
+        
+        // パーティクルの削除タイマー
+        setTimeout(() => {
+            this.scene.remove(particles);
+        }, 1000);
     }
 
     updateUI() {
