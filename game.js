@@ -24,7 +24,10 @@ class NinjaShooter {
         try {
             this.init();
             this.setupEventListeners();
-            this.setupMobileControls();
+            // Delay mobile controls setup to ensure DOM is ready
+            setTimeout(() => {
+                this.setupMobileControls();
+            }, 200);
             console.log('NinjaShooter initialized successfully');
         } catch (error) {
             console.error('Error initializing NinjaShooter:', error);
@@ -278,6 +281,7 @@ class NinjaShooter {
         });
 
         const startButton = document.getElementById('startButton');
+        console.log('Looking for start button:', startButton);
         if (startButton) {
             startButton.addEventListener('click', () => {
                 console.log('Start button clicked');
@@ -286,76 +290,123 @@ class NinjaShooter {
             console.log('Start button event listener added');
         } else {
             console.error('Start button not found');
+            // Try to find it again after a delay
+            setTimeout(() => {
+                const delayedStartButton = document.getElementById('startButton');
+                console.log('Delayed start button search:', delayedStartButton);
+                if (delayedStartButton) {
+                    delayedStartButton.addEventListener('click', () => {
+                        console.log('Delayed start button clicked');
+                        this.startGame();
+                    });
+                    console.log('Delayed start button event listener added');
+                } else {
+                    console.error('Start button still not found after delay');
+                }
+            }, 500);
         }
     }
     
     setupMobileControls() {
-        const joystick = document.querySelector('.mobile-joystick');
-        const joystickHandle = document.querySelector('.mobile-joystick-handle');
-        const attackButton = document.querySelector('.mobile-attack-button');
-        
-        if (joystick && joystickHandle) {
-            const joystickRect = joystick.getBoundingClientRect();
-            this.mobileControls.joystick.centerX = joystickRect.left + joystickRect.width / 2;
-            this.mobileControls.joystick.centerY = joystickRect.top + joystickRect.height / 2;
+        console.log('Setting up mobile controls...');
+        try {
+            const joystick = document.querySelector('.mobile-joystick');
+            const joystickHandle = document.querySelector('.mobile-joystick-handle');
+            const attackButton = document.querySelector('.mobile-attack-button');
             
-            // Touch events for joystick
-            joystick.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.mobileControls.joystick.active = true;
-                this.updateJoystick(e.touches[0], joystickHandle);
+            console.log('Mobile elements found:', {
+                joystick: !!joystick,
+                joystickHandle: !!joystickHandle,
+                attackButton: !!attackButton
             });
             
-            joystick.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (this.mobileControls.joystick.active) {
+            if (joystick && joystickHandle) {
+                // Delay getting bounding rect to ensure elements are rendered
+                setTimeout(() => {
+                    try {
+                        const joystickRect = joystick.getBoundingClientRect();
+                        this.mobileControls.joystick.centerX = joystickRect.left + joystickRect.width / 2;
+                        this.mobileControls.joystick.centerY = joystickRect.top + joystickRect.height / 2;
+                        console.log('Joystick center position set:', this.mobileControls.joystick.centerX, this.mobileControls.joystick.centerY);
+                    } catch (rectError) {
+                        console.error('Error getting joystick position:', rectError);
+                    }
+                }, 100);
+                
+                // Touch events for joystick
+                joystick.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.joystick.active = true;
                     this.updateJoystick(e.touches[0], joystickHandle);
-                }
-            });
+                });
+                
+                joystick.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    if (this.mobileControls.joystick.active) {
+                        this.updateJoystick(e.touches[0], joystickHandle);
+                    }
+                });
+                
+                joystick.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.joystick.active = false;
+                    this.mobileControls.joystick.x = 0;
+                    this.mobileControls.joystick.y = 0;
+                    joystickHandle.style.transform = 'translate(-50%, -50%)';
+                });
+                
+                console.log('Joystick event listeners added');
+            }
             
-            joystick.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.mobileControls.joystick.active = false;
-                this.mobileControls.joystick.x = 0;
-                this.mobileControls.joystick.y = 0;
-                joystickHandle.style.transform = 'translate(-50%, -50%)';
-            });
-        }
-        
-        if (attackButton) {
-            attackButton.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.mobileControls.attackButton = true;
-            });
+            if (attackButton) {
+                attackButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.attackButton = true;
+                });
+                
+                attackButton.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.mobileControls.attackButton = false;
+                });
+                
+                console.log('Attack button event listeners added');
+            }
             
-            attackButton.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.mobileControls.attackButton = false;
-            });
+            console.log('Mobile controls setup completed');
+        } catch (error) {
+            console.error('Error setting up mobile controls:', error);
+            // Continue without mobile controls if there's an error
         }
     }
     
     updateJoystick(touch, handle) {
-        const rect = document.querySelector('.mobile-joystick').getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        const deltaX = touch.clientX - centerX;
-        const deltaY = touch.clientY - centerY;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const maxDistance = 30;
-        
-        if (distance <= maxDistance) {
-            this.mobileControls.joystick.x = deltaX / maxDistance;
-            this.mobileControls.joystick.y = deltaY / maxDistance;
-            handle.style.transform = `translate(-50%, -50%) translate(${deltaX}px, ${deltaY}px)`;
-        } else {
-            const angle = Math.atan2(deltaY, deltaX);
-            const limitedX = Math.cos(angle) * maxDistance;
-            const limitedY = Math.sin(angle) * maxDistance;
-            this.mobileControls.joystick.x = limitedX / maxDistance;
-            this.mobileControls.joystick.y = limitedY / maxDistance;
-            handle.style.transform = `translate(-50%, -50%) translate(${limitedX}px, ${limitedY}px)`;
+        try {
+            const joystick = document.querySelector('.mobile-joystick');
+            if (!joystick) return;
+            
+            const rect = joystick.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const deltaX = touch.clientX - centerX;
+            const deltaY = touch.clientY - centerY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const maxDistance = 30;
+            
+            if (distance <= maxDistance) {
+                this.mobileControls.joystick.x = deltaX / maxDistance;
+                this.mobileControls.joystick.y = deltaY / maxDistance;
+                handle.style.transform = `translate(-50%, -50%) translate(${deltaX}px, ${deltaY}px)`;
+            } else {
+                const angle = Math.atan2(deltaY, deltaX);
+                const limitedX = Math.cos(angle) * maxDistance;
+                const limitedY = Math.sin(angle) * maxDistance;
+                this.mobileControls.joystick.x = limitedX / maxDistance;
+                this.mobileControls.joystick.y = limitedY / maxDistance;
+                handle.style.transform = `translate(-50%, -50%) translate(${limitedX}px, ${limitedY}px)`;
+            }
+        } catch (error) {
+            console.error('Error updating joystick:', error);
         }
     }
 
@@ -579,8 +630,11 @@ class NinjaShooter {
 // Initialize the game when the script loads
 console.log('Game script loaded, initializing game...');
 try {
+    console.log('Creating NinjaShooter instance...');
     const game = new NinjaShooter();
     console.log('Game instance created successfully');
+    window.game = game; // Make game accessible globally for debugging
 } catch (error) {
     console.error('Failed to create game instance:', error);
+    console.error('Error stack:', error.stack);
 }
