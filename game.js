@@ -1,5 +1,6 @@
 class NinjaShooter {
     constructor() {
+        console.log('NinjaShooter constructor called');
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -14,30 +15,46 @@ class NinjaShooter {
         this.spacePressed = false;
         this.lastBulletTime = 0;
         
-        this.init();
-        this.setupEventListeners();
+        try {
+            this.init();
+            this.setupEventListeners();
+            console.log('NinjaShooter initialized successfully');
+        } catch (error) {
+            console.error('Error initializing NinjaShooter:', error);
+        }
     }
 
     init() {
-        this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(0x404040, 10, 100);
-        
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 5, 10);
-        
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x87CEEB);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        
-        document.getElementById('gameContainer').appendChild(this.renderer.domElement);
-        
-        this.setupLights();
-        this.setupEnvironment();
-        this.createPlayer();
-        
-        window.addEventListener('resize', () => this.onWindowResize());
+        console.log('Initializing game...');
+        try {
+            this.scene = new THREE.Scene();
+            this.scene.fog = new THREE.Fog(0x404040, 10, 100);
+            
+            this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            this.camera.position.set(0, 5, 10);
+            
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setClearColor(0x87CEEB);
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap || THREE.BasicShadowMap;
+            
+            const gameContainer = document.getElementById('gameContainer');
+            if (!gameContainer) {
+                throw new Error('Game container not found');
+            }
+            gameContainer.appendChild(this.renderer.domElement);
+            
+            this.setupLights();
+            this.setupEnvironment();
+            this.createPlayer();
+            
+            window.addEventListener('resize', () => this.onWindowResize());
+            console.log('Game initialization completed');
+        } catch (error) {
+            console.error('Error in init():', error);
+            throw error;
+        }
     }
 
     setupLights() {
@@ -191,15 +208,34 @@ class NinjaShooter {
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         });
 
-        document.getElementById('startButton').addEventListener('click', () => {
-            this.startGame();
-        });
+        const startButton = document.getElementById('startButton');
+        if (startButton) {
+            startButton.addEventListener('click', () => {
+                console.log('Start button clicked');
+                this.startGame();
+            });
+            console.log('Start button event listener added');
+        } else {
+            console.error('Start button not found');
+        }
     }
 
     startGame() {
-        this.gameStarted = true;
-        document.getElementById('startScreen').style.display = 'none';
-        this.gameLoop();
+        console.log('Starting game...');
+        try {
+            this.gameStarted = true;
+            const startScreen = document.getElementById('startScreen');
+            if (startScreen) {
+                startScreen.style.display = 'none';
+                console.log('Start screen hidden');
+            } else {
+                console.error('Start screen not found');
+            }
+            this.gameLoop();
+            console.log('Game loop started');
+        } catch (error) {
+            console.error('Error starting game:', error);
+        }
     }
 
     updatePlayer() {
@@ -321,14 +357,19 @@ class NinjaShooter {
     gameLoop() {
         if (!this.gameStarted) return;
         
-        this.updatePlayer();
-        this.updateEnemies();
-        this.updateBullets();
-        this.checkCollisions();
-        
-        this.renderer.render(this.scene, this.camera);
-        
-        requestAnimationFrame(() => this.gameLoop());
+        try {
+            this.updatePlayer();
+            this.updateEnemies();
+            this.updateBullets();
+            this.checkCollisions();
+            
+            this.renderer.render(this.scene, this.camera);
+            
+            requestAnimationFrame(() => this.gameLoop());
+        } catch (error) {
+            console.error('Error in game loop:', error);
+            this.gameStarted = false;
+        }
     }
 
     onWindowResize() {
@@ -338,4 +379,11 @@ class NinjaShooter {
     }
 }
 
-const game = new NinjaShooter();
+// Initialize the game when the script loads
+console.log('Game script loaded, initializing game...');
+try {
+    const game = new NinjaShooter();
+    console.log('Game instance created successfully');
+} catch (error) {
+    console.error('Failed to create game instance:', error);
+}
