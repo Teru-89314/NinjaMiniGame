@@ -11,6 +11,8 @@ class NinjaShooter {
         this.gameStarted = false;
         this.keys = {};
         this.mouse = { x: 0, y: 0 };
+        this.spacePressed = false;
+        this.lastBulletTime = 0;
         
         this.init();
         this.setupEventListeners();
@@ -79,7 +81,7 @@ class NinjaShooter {
     createPlayer() {
         const group = new THREE.Group();
         
-        const bodyGeometry = new THREE.CapsuleGeometry(0.3, 1.2, 4, 8);
+        const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.2, 8);
         const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         body.castShadow = true;
@@ -172,10 +174,16 @@ class NinjaShooter {
     setupEventListeners() {
         document.addEventListener('keydown', (event) => {
             this.keys[event.code] = true;
+            if (event.code === 'Space') {
+                event.preventDefault();
+            }
         });
 
         document.addEventListener('keyup', (event) => {
             this.keys[event.code] = false;
+            if (event.code === 'Space') {
+                event.preventDefault();
+            }
         });
 
         document.addEventListener('mousemove', (event) => {
@@ -220,8 +228,14 @@ class NinjaShooter {
         this.camera.position.z = playerPos.z + 10;
         this.camera.lookAt(playerPos);
 
-        if (this.keys['Space'] && Math.random() < 0.3) {
-            this.createBullet();
+        if (this.keys['Space']) {
+            if (!this.spacePressed || Date.now() - this.lastBulletTime > 200) {
+                this.createBullet();
+                this.lastBulletTime = Date.now();
+                this.spacePressed = true;
+            }
+        } else {
+            this.spacePressed = false;
         }
     }
 
