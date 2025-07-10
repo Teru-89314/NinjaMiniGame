@@ -170,24 +170,37 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
     <script>
-        // Wait for THREE.js to load before initializing the game
+        // Simplified initialization
         document.addEventListener('DOMContentLoaded', function() {
-            // Add a small delay to ensure Three.js is fully loaded
-            setTimeout(function() {
-                if (typeof THREE !== 'undefined') {
-                    const script = document.createElement('script');
-                    script.src = 'game.js';
-                    script.onload = function() {
-                        console.log('Game script loaded successfully');
-                    };
-                    script.onerror = function() {
-                        console.error('Failed to load game script');
-                    };
-                    document.head.appendChild(script);
-                } else {
-                    console.error('Three.js not loaded');
-                }
-            }, 100);
+            console.log('DOM content loaded');
+            
+            // Check if THREE.js is loaded
+            if (typeof THREE !== 'undefined') {
+                console.log('THREE.js is available');
+                
+                // Load game script
+                const script = document.createElement('script');
+                script.src = 'game.js';
+                script.onload = function() {
+                    console.log('Game script loaded successfully');
+                };
+                script.onerror = function() {
+                    console.error('Failed to load game script');
+                };
+                document.head.appendChild(script);
+            } else {
+                console.error('Three.js not loaded');
+                // Try again after a short delay
+                setTimeout(function() {
+                    if (typeof THREE !== 'undefined') {
+                        const script = document.createElement('script');
+                        script.src = 'game.js';
+                        document.head.appendChild(script);
+                    } else {
+                        console.error('Three.js still not available');
+                    }
+                }, 500);
+            }
         });
     </script>
 </body>

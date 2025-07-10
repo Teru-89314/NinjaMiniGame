@@ -24,14 +24,13 @@ class NinjaShooter {
         try {
             this.init();
             this.setupEventListeners();
-            // Delay mobile controls setup to ensure DOM is ready
-            setTimeout(() => {
-                this.setupMobileControls();
-            }, 200);
             console.log('NinjaShooter initialized successfully');
         } catch (error) {
             console.error('Error initializing NinjaShooter:', error);
         }
+        
+        // Setup mobile controls separately to prevent blocking game initialization
+        this.setupMobileControlsSafely();
     }
 
     init() {
@@ -280,103 +279,119 @@ class NinjaShooter {
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         });
 
-        const startButton = document.getElementById('startButton');
-        console.log('Looking for start button:', startButton);
-        if (startButton) {
-            startButton.addEventListener('click', () => {
-                console.log('Start button clicked');
-                this.startGame();
-            });
-            console.log('Start button event listener added');
-        } else {
-            console.error('Start button not found');
-            // Try to find it again after a delay
-            setTimeout(() => {
-                const delayedStartButton = document.getElementById('startButton');
-                console.log('Delayed start button search:', delayedStartButton);
-                if (delayedStartButton) {
-                    delayedStartButton.addEventListener('click', () => {
-                        console.log('Delayed start button clicked');
-                        this.startGame();
-                    });
-                    console.log('Delayed start button event listener added');
+        // Simple start button setup
+        this.setupStartButton();
+    }
+    
+    setupStartButton() {
+        // Multiple attempts to find and setup start button
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const trySetupButton = () => {
+            attempts++;
+            const startButton = document.getElementById('startButton');
+            console.log(`Start button setup attempt ${attempts}/${maxAttempts}:`, !!startButton);
+            
+            if (startButton) {
+                startButton.addEventListener('click', () => {
+                    console.log('Start button clicked!');
+                    this.startGame();
+                });
+                console.log('Start button event listener added successfully');
+                return true;
+            } else if (attempts < maxAttempts) {
+                setTimeout(trySetupButton, 200);
+            } else {
+                console.error('Failed to find start button after all attempts');
+            }
+        };
+        
+        // Try immediately and also with delays
+        trySetupButton();
+    }
+    
+    setupMobileControlsSafely() {
+        // Use multiple delayed attempts to setup mobile controls
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        const trySetup = () => {
+            attempts++;
+            try {
+                console.log(`Mobile controls setup attempt ${attempts}/${maxAttempts}`);
+                const joystick = document.querySelector('.mobile-joystick');
+                const joystickHandle = document.querySelector('.mobile-joystick-handle');
+                const attackButton = document.querySelector('.mobile-attack-button');
+                
+                if (joystick && joystickHandle && attackButton) {
+                    this.setupMobileControls();
+                    console.log('Mobile controls setup successful');
+                    return true;
                 } else {
-                    console.error('Start button still not found after delay');
+                    console.log('Mobile elements not ready yet, retrying...');
+                    if (attempts < maxAttempts) {
+                        setTimeout(trySetup, 500);
+                    } else {
+                        console.log('Mobile controls setup failed after max attempts');
+                    }
                 }
-            }, 500);
-        }
+            } catch (error) {
+                console.error('Error in mobile controls setup attempt:', error);
+                if (attempts < maxAttempts) {
+                    setTimeout(trySetup, 500);
+                }
+            }
+        };
+        
+        setTimeout(trySetup, 100);
     }
     
     setupMobileControls() {
         console.log('Setting up mobile controls...');
-        try {
-            const joystick = document.querySelector('.mobile-joystick');
-            const joystickHandle = document.querySelector('.mobile-joystick-handle');
-            const attackButton = document.querySelector('.mobile-attack-button');
-            
-            console.log('Mobile elements found:', {
-                joystick: !!joystick,
-                joystickHandle: !!joystickHandle,
-                attackButton: !!attackButton
-            });
-            
-            if (joystick && joystickHandle) {
-                // Delay getting bounding rect to ensure elements are rendered
-                setTimeout(() => {
-                    try {
-                        const joystickRect = joystick.getBoundingClientRect();
-                        this.mobileControls.joystick.centerX = joystickRect.left + joystickRect.width / 2;
-                        this.mobileControls.joystick.centerY = joystickRect.top + joystickRect.height / 2;
-                        console.log('Joystick center position set:', this.mobileControls.joystick.centerX, this.mobileControls.joystick.centerY);
-                    } catch (rectError) {
-                        console.error('Error getting joystick position:', rectError);
-                    }
-                }, 100);
-                
-                // Touch events for joystick
-                joystick.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    this.mobileControls.joystick.active = true;
-                    this.updateJoystick(e.touches[0], joystickHandle);
-                });
-                
-                joystick.addEventListener('touchmove', (e) => {
-                    e.preventDefault();
-                    if (this.mobileControls.joystick.active) {
-                        this.updateJoystick(e.touches[0], joystickHandle);
-                    }
-                });
-                
-                joystick.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    this.mobileControls.joystick.active = false;
-                    this.mobileControls.joystick.x = 0;
-                    this.mobileControls.joystick.y = 0;
-                    joystickHandle.style.transform = 'translate(-50%, -50%)';
-                });
-                
-                console.log('Joystick event listeners added');
-            }
-            
-            if (attackButton) {
-                attackButton.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    this.mobileControls.attackButton = true;
-                });
-                
-                attackButton.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    this.mobileControls.attackButton = false;
-                });
-                
-                console.log('Attack button event listeners added');
-            }
-            
-            console.log('Mobile controls setup completed');
-        } catch (error) {
-            console.error('Error setting up mobile controls:', error);
-            // Continue without mobile controls if there's an error
+        const joystick = document.querySelector('.mobile-joystick');
+        const joystickHandle = document.querySelector('.mobile-joystick-handle');
+        const attackButton = document.querySelector('.mobile-attack-button');
+        
+        if (!joystick || !joystickHandle || !attackButton) {
+            console.error('Mobile control elements not found');
+            return;
         }
+        
+        // Touch events for joystick
+        joystick.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.mobileControls.joystick.active = true;
+            this.updateJoystick(e.touches[0], joystickHandle);
+        });
+        
+        joystick.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (this.mobileControls.joystick.active) {
+                this.updateJoystick(e.touches[0], joystickHandle);
+            }
+        });
+        
+        joystick.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.mobileControls.joystick.active = false;
+            this.mobileControls.joystick.x = 0;
+            this.mobileControls.joystick.y = 0;
+            joystickHandle.style.transform = 'translate(-50%, -50%)';
+        });
+        
+        // Touch events for attack button
+        attackButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.mobileControls.attackButton = true;
+        });
+        
+        attackButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.mobileControls.attackButton = false;
+        });
+        
+        console.log('Mobile controls setup completed');
     }
     
     updateJoystick(touch, handle) {
@@ -420,11 +435,19 @@ class NinjaShooter {
                 console.log('Start screen hidden');
             } else {
                 console.error('Start screen not found');
+                return;
             }
+            
+            // Reset game state
+            this.score = 0;
+            this.lives = 3;
+            this.updateUI();
+            
             this.gameLoop();
-            console.log('Game loop started');
+            console.log('Game loop started successfully');
         } catch (error) {
             console.error('Error starting game:', error);
+            console.error('Error stack:', error.stack);
         }
     }
 
